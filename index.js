@@ -13,10 +13,16 @@ function createBot() {
 
   bot.loadPlugin(pathfinderPlugin);
 
+  // বটের হোম/বেস পজিশন সেভ রাখার ভ্যারিয়েবল
+  let homePosition = null;
+
   bot.once('spawn', () => {
     console.log('Bot successfully joined the server!');
     const defaultMove = new Movements(bot);
     bot.pathfinder.setMovements(defaultMove);
+
+    // জয়েন করার সাথে সাথে তার অবস্থানকে হোম ধরে নেওয়া
+    homePosition = bot.entity.position.clone();
 
     setInterval(() => {
       handleBotActions(bot);
@@ -29,7 +35,7 @@ function createBot() {
     if (bot.time.isNight || bot.isRaining) {
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
-        maxDistance: 32
+        maxDistance: 15
       });
 
       if (bedBlock) {
@@ -41,17 +47,20 @@ function createBot() {
           console.log(`Could not sleep: ${err.message}`);
         }
       } else {
-        randomWalk(bot);
+        stayNearHome(bot);
       }
     } else {
-      randomWalk(bot);
+      stayNearHome(bot);
     }
   }
 
-  function randomWalk(bot) {
-    const rx = Math.floor(Math.random() * 20) - 10;
-    const rz = Math.floor(Math.random() * 20) - 10;
-    const targetPos = bot.entity.position.offset(rx, 0, rz);
+  // হোম বা বেডের আশেপাশে ৩ ব্লকের মধ্যে হালকা হাঁটাচলা
+  function stayNearHome(bot) {
+    if (!homePosition) return;
+
+    const rx = Math.floor(Math.random() * 7) - 3; // -৩ থেকে +৩ ব্লকের মধ্যে
+    const rz = Math.floor(Math.random() * 7) - 3;
+    const targetPos = homePosition.offset(rx, 0, rz);
 
     bot.pathfinder.setGoal(new goals.GoalBlock(targetPos.x, targetPos.y, targetPos.z));
   }
