@@ -1,85 +1,91 @@
 const mineflayer = require('mineflayer');
-
-// আপনার বেডের অবস্থান
-const BED_X = -88;
-const BED_Y = 64;
-const BED_Z = -72;
-
-// বারবার দ্রুত রিকানেক্ট রোধ করতে ফ্ল্যাগ
-let isReconnecting = false;
+const pathfinderPlugin = require('mineflayer-pathfinder').pathfinder;
+const Movements = require('mineflayer-pathfinder').Movements;
+const goals = require('mineflayer-pathfinder').goals;
 
 function createBot() {
-  console.log('Connecting to server...');
-  
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
-    checkTimeoutInterval: 60 * 1000 // ১ মিনিট টাইমআউট দেওয়া হলো যাতে দ্রুত কিক না মারে
+    checkTimeoutInterval: 60 * 1000
   });
 
-  bot.once('spawn', () => {
-    console.log('Bot successfully joined and stabilized!');
-    isReconnecting = false;
+  bot.loadPlugin(pathfinderPlugin);
 
-    // প্রতি ১৫ সেকেন্ড পর পর চেক করবে
+  let spawnPos = null;
+
+  bot.once('spawn', () => {
+    console.log('Bot successfully joined!');
+    
+    // বট যেখানেই নামবে, সেই জায়গাকেই তার 'Home' বানিয়ে নেবে
+    spawnPos = bot.entity.position.clone();
+
+    try {
+      const defaultMove = new Movements(bot);
+      defaultMove.canDig = false;
+      bot.pathfinder.setMovements(defaultMove);
+    } catch (e) {}
+
+    // প্রতি ৭ সেকেন্ড পর পর সিদ্ধান্ত নেবে
     setInterval(() => {
-      handleBotLogic(bot);
-    }, 15000);
+      handleBotActions(bot);
+    }, 7000);
   });
 
   bot.on('death', () => {
-    console.log('Bot died! Respawning in 5 seconds...');
+    console.log('Bot died! Respawning...');
     setTimeout(() => {
-      try { bot.respawn(); } catch (err) {}
-    }, 5000);
+      try { bot.respawn(); } catch (e) {}
+    }, 3000);
   });
 
-  async function handleBotLogic(bot) {
+  async function handleBotActions(bot) {
     if (!bot || !bot.entity) return;
 
-    // রাত হলে বা বৃষ্টি পড়লে
+    // ১. রাত হলে বা বৃষ্টি হলে ঘুমাবে
     if (bot.time && (bot.time.isNight || bot.isRaining)) {
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
-        maxDistance: 8
+        maxDistance: 6
       });
 
       if (bedBlock) {
         try {
+          // বেডের দিকে একটু এগিয়ে গিয়ে শোবে
+          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           await bot.sleep(bedBlock);
-          console.log('Bot is sleeping safely.');
+          console.log('Bot is now sleeping!');
         } catch (err) {
-          // ঘুমাতে না পারলে স্বাভাবিক থাকবে
+          console.log('Sleep error:', err.message);
         }
       }
     } else {
-      // দিনের বেলা শান্তভাবে সামান্য দৃষ্টিকোণ ঘোরাবে (AFK কিক এড়াতে)
-      const yaw = Math.random() * Math.PI * 2;
-      bot.look(yaw, 0, true);
+      // ২. দিনের বেলা স্পন পয়েন্ট বা বর্তমান অবস্থানের চারপাশে ৩ ব্লক হাঁটাচলা করবে
+      if (spawnPos) {
+        const rx = Math.floor(Math.random() * 7) - 3; // -৩ থেকে +৩ ব্লক
+        const rz = Math.floor(Math.random() * 7) - 3;
+        
+        try {
+          bot.pathfinder.setGoal(new goals.GoalBlock(
+            Math.floor(spawnPos.x) + rx,
+            Math.floor(spawnPos.y),
+            Math.floor(spawnPos.z) + rz
+          ));
+        } catch (e) {}
+      }
     }
   }
 
-  // ডিসকানেক্ট হলে হঠাৎ সাথে সাথে ট্রাই করবে না, ৩০ সেকেন্ড পর একবার ট্রাই করবে
   bot.on('end', (reason) => {
-    console.log(`Bot disconnected (${reason}). Waiting 30 seconds before trying again...`);
-    
-    if (!isReconnecting) {
-      isReconnecting = true;
-      setTimeout(() => {
-        createBot();
-      }, 30000); // ৩০ সেকেন্ডের বিরতি
-    }
+    console.log(`Bot disconnected: ${reason}. Reconnecting in 20s...`);
+    setTimeout(createBot, 20000);
   });
 
-  bot.on('error', (err) => {
-    console.log('Connection error:', err.message);
-  });
+  bot.on('error', err => console.log('Bot error:', err.message));
 }
 
-process.on('uncaughtException', (err) => {
-  console.log('System Handled Exception:', err.message);
-});
+process.on('uncaughtException', err => console.log('Handled error:', err.message));
 
 createBot();
