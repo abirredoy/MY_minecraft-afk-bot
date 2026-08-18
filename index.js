@@ -21,7 +21,7 @@ function createBot() {
 
   bot.once('spawn', () => {
     console.log('Bot successfully joined!');
-    bot.chat('Bot is online! Commands: !auto, !follow, !stop, !sleep');
+    bot.chat('Bot is online! Only ZenoXAbir can control me. Commands: !auto, !follow, !stop, !sleep');
 
     homePos = bot.entity.position.clone();
 
@@ -51,7 +51,6 @@ function createBot() {
       });
 
       if (bedBlock) {
-        // যদি কাছে বেড থাকে তবে ঘুমিয়ে পড়বে
         bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
         setTimeout(async () => {
           try {
@@ -66,7 +65,7 @@ function createBot() {
 
     // ২. বেড না পেলে হোম পজিশনের চারপাশে এলোমেলো হাঁটা
     if (homePos && !bot.pathfinder.isMoving()) {
-      const rx = Math.floor(Math.random() * 9) - 4; // -৪ থেকে +৪ ব্লক
+      const rx = Math.floor(Math.random() * 9) - 4;
       const rz = Math.floor(Math.random() * 9) - 4;
 
       try {
@@ -79,12 +78,23 @@ function createBot() {
     }
   }
 
-  // ফাস্ট ও সিকিউর চ্যাট কমান্ড হ্যান্ডলার
-  bot.on('chat', async (username, message) => {
-    if (username === bot.username) return;
+  // ফিক্সড চ্যাট কমান্ড হ্যান্ডলার
+  bot.on('message', (jsonMsg) => {
+    const chatText = jsonMsg.toString();
+    
+    if (!chatText.includes('<') || !chatText.includes('>')) return;
+    
+    const parts = chatText.split('>');
+    const senderPart = parts[0].replace('<', '').trim();
+    const username = senderPart.split(' ').pop(); 
+    const message = parts.slice(1).join('>').trim();
+
+    // শুধুমাত্র ZenoXAbir এর কমান্ড শুনবে
+    if (username !== 'ZenoXAbir') return;
     if (!message.startsWith('!')) return;
 
     const command = message.slice(1).toLowerCase().trim();
+    console.log(`Command received from ZenoXAbir: ${command}`);
 
     if (command === 'auto') {
       currentMode = 'auto';
@@ -92,12 +102,21 @@ function createBot() {
     }
     else if (command === 'follow') {
       currentMode = 'follow';
-      const target = bot.players[username] ? bot.players[username].entity : null;
+      
+      let target = null;
+      if (bot.players['ZenoXAbir'] && bot.players['ZenoXAbir'].entity) {
+        target = bot.players['ZenoXAbir'].entity;
+      } else {
+        const playerEntity = Object.values(bot.entities).find(e => e.type === 'player' && e.username === 'ZenoXAbir');
+        if (playerEntity) target = playerEntity;
+      }
+
       if (!target) {
-        bot.chat(`${username}, I can't see you!`);
+        bot.chat('ZenoXAbir, I can\'t see you nearby!');
         return;
       }
-      bot.chat(`Following ${username}!`);
+
+      bot.chat('Following you, ZenoXAbir!');
       try {
         bot.pathfinder.setGoal(new goals.GoalFollow(target, 1), true);
       } catch (err) {}
