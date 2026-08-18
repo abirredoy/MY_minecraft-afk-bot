@@ -13,8 +13,8 @@ function createBot() {
 
   bot.loadPlugin(pathfinderPlugin);
 
-  // 🔴 এখানে আপনার বেডের সঠিক X, Y, Z নম্বর বসিয়ে দিন
-  const bedPosition = { x: --5.31, y: 86.85, z: -5.31 };
+  // 🔴 আপনার বেডের কোঅর্ডিনেট (X: -85, Y: 64, Z: -73)
+  const bedPosition = { x: --5.31, y: 86.85, z: 5.97 };
 
   bot.once('spawn', () => {
     console.log('Bot successfully joined the server!');
@@ -36,17 +36,12 @@ function createBot() {
   async function handleBotActions(bot) {
     if (!bot.entity) return;
 
-    // রাত হলে বা বৃষ্টি হলে
     if (bot.time.isNight || bot.isRaining) {
-      console.log('Night detected. Moving to bed...');
+      console.log('Night/Rain detected. Moving to bed...');
       
-      // প্রথমে বেডের দিকে হেঁটে যাবে
-      bot.pathfinder.setGoal(new goals.GoalBlock(bedPosition.x, bedPosition.y, bedPosition.z));
-
-      // বেডের কাছাকাছি এলে ঘুমানোর চেষ্টা করবে
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
-        maxDistance: 6
+        maxDistance: 15
       });
 
       if (bedBlock) {
@@ -55,16 +50,18 @@ function createBot() {
           console.log('Bot is now sleeping.');
         } catch (err) {
           console.log(`Could not sleep: ${err.message}`);
+          bot.pathfinder.setGoal(new goals.GoalBlock(bedPosition.x, bedPosition.y, bedPosition.z));
         }
+      } else {
+        bot.pathfinder.setGoal(new goals.GoalBlock(bedPosition.x, bedPosition.y, bedPosition.z));
       }
     } else {
-      // দিনের বেলা বেডের ৩ ব্লকের ভেতরে হালকা ঘোরাঘুরি করবে
       stayNearBed(bot);
     }
   }
 
   function stayNearBed(bot) {
-    const rx = Math.floor(Math.random() * 5) - 2; // -২ থেকে +২ ব্লক
+    const rx = Math.floor(Math.random() * 5) - 2;
     const rz = Math.floor(Math.random() * 5) - 2;
     const targetPos = {
       x: bedPosition.x + rx,
