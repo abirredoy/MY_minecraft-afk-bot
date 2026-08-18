@@ -21,7 +21,7 @@ function createBot() {
 
   bot.once('spawn', () => {
     console.log('Bot successfully joined!');
-    bot.chat('Bot is online! Only ZenoXAbir can control me. Commands: !auto, !follow, !stop, !sleep');
+    bot.chat('Bot is online! Commands: !auto, !follow, !stop, !sleep');
 
     homePos = bot.entity.position.clone();
 
@@ -43,7 +43,6 @@ function createBot() {
   async function runAutoBehavior(bot) {
     if (!bot || !bot.entity || bot.isSleeping) return;
 
-    // ১. বেড খুঁজে ঘুমানোর চেষ্টা করা
     try {
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
@@ -63,7 +62,6 @@ function createBot() {
       }
     } catch (e) {}
 
-    // ২. বেড না পেলে হোম পজিশনের চারপাশে এলোমেলো হাঁটা
     if (homePos && !bot.pathfinder.isMoving()) {
       const rx = Math.floor(Math.random() * 9) - 4;
       const rz = Math.floor(Math.random() * 9) - 4;
@@ -78,23 +76,19 @@ function createBot() {
     }
   }
 
-  // ফিক্সড চ্যাট কমান্ড হ্যান্ডলার
-  bot.on('message', (jsonMsg) => {
-    const chatText = jsonMsg.toString();
-    
-    if (!chatText.includes('<') || !chatText.includes('>')) return;
-    
-    const parts = chatText.split('>');
-    const senderPart = parts[0].replace('<', '').trim();
-    const username = senderPart.split(' ').pop(); 
-    const message = parts.slice(1).join('>').trim();
+  // সহজ ও শক্তিশালী চ্যাট লিসেনার (চ্যাট ইভেন্ট ব্যবহার করা হয়েছে)
+  bot.on('chat', (username, message) => {
+    // নিজের পাঠানো মেসেজ ইগনোর করবে
+    if (username === bot.username) return;
+
+    console.log(`Chat from ${username}: ${message}`);
 
     // শুধুমাত্র ZenoXAbir এর কমান্ড শুনবে
     if (username !== 'ZenoXAbir') return;
     if (!message.startsWith('!')) return;
 
     const command = message.slice(1).toLowerCase().trim();
-    console.log(`Command received from ZenoXAbir: ${command}`);
+    console.log(`Command executed: ${command}`);
 
     if (command === 'auto') {
       currentMode = 'auto';
