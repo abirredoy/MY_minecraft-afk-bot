@@ -1,99 +1,85 @@
 const mineflayer = require('mineflayer');
-const pathfinderPlugin = require('mineflayer-pathfinder').pathfinder;
-const Movements = require('mineflayer-pathfinder').Movements;
-const goals = require('mineflayer-pathfinder').goals;
 
-// আপনার বর্তমান বেডের লোকেশন
-const bedPosition = { x: -92.95, y: 64.00, z: -66.53 };
+// আপনার বেডের অবস্থান
+const BED_X = -88;
+const BED_Y = 64;
+const BED_Z = -72;
+
+// বারবার দ্রুত রিকানেক্ট রোধ করতে ফ্ল্যাগ
+let isReconnecting = false;
 
 function createBot() {
+  console.log('Connecting to server...');
+  
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
     username: 'ADMIN',
-    version: '1.21.1'
+    version: '1.21.1',
+    checkTimeoutInterval: 60 * 1000 // ১ মিনিট টাইমআউট দেওয়া হলো যাতে দ্রুত কিক না মারে
   });
 
-  bot.loadPlugin(pathfinderPlugin);
-
   bot.once('spawn', () => {
-    console.log('Bot successfully joined the server!');
-    
-    // মুভমেন্টের নিয়ম সহজ করা হলো
-    const defaultMove = new Movements(bot);
-    defaultMove.canDig = false; // কোনো ব্লক ভাঙবে না
-    bot.pathfinder.setMovements(defaultMove);
+    console.log('Bot successfully joined and stabilized!');
+    isReconnecting = false;
 
-    // লুপে অ্যাকশন চালানো
+    // প্রতি ১৫ সেকেন্ড পর পর চেক করবে
     setInterval(() => {
-      try {
-        handleBotActions(bot);
-      } catch (err) {
-        console.log('Action Loop Ignored Error:', err.message);
-      }
-    }, 10000);
+      handleBotLogic(bot);
+    }, 15000);
   });
 
   bot.on('death', () => {
-    console.log('Bot died! Respawning...');
+    console.log('Bot died! Respawning in 5 seconds...');
     setTimeout(() => {
-      try { bot.respawn(); } catch (e) {}
-    }, 2000);
+      try { bot.respawn(); } catch (err) {}
+    }, 5000);
   });
 
-  async function handleBotActions(bot) {
+  async function handleBotLogic(bot) {
     if (!bot || !bot.entity) return;
 
-    // রাত বা বৃষ্টি হলে
+    // রাত হলে বা বৃষ্টি পড়লে
     if (bot.time && (bot.time.isNight || bot.isRaining)) {
-      console.log('Night/Rain detected. Trying to sleep...');
-      
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
-        maxDistance: 10
+        maxDistance: 8
       });
 
       if (bedBlock) {
         try {
           await bot.sleep(bedBlock);
-          console.log('Bot is sleeping.');
+          console.log('Bot is sleeping safely.');
         } catch (err) {
-          console.log('Sleep failed:', err.message);
+          // ঘুমাতে না পারলে স্বাভাবিক থাকবে
         }
-      } else {
-        // বেডের পাশে না থাকলে হাঁটার চেষ্টা করবে
-        safeMove(bot, bedPosition.x, bedPosition.y, bedPosition.z);
       }
     } else {
-      // দিনের বেলা হালকা র‍্যান্ডম হাঁটাচলা
-      const rx = Math.floor(Math.random() * 3) - 1;
-      const rz = Math.floor(Math.random() * 3) - 1;
-      safeMove(bot, bedPosition.x + rx, bedPosition.y, bedPosition.z + rz);
+      // দিনের বেলা শান্তভাবে সামান্য দৃষ্টিকোণ ঘোরাবে (AFK কিক এড়াতে)
+      const yaw = Math.random() * Math.PI * 2;
+      bot.look(yaw, 0, true);
     }
   }
 
-  function safeMove(bot, x, y, z) {
-    try {
-      if (bot.pathfinder) {
-        bot.pathfinder.setGoal(new goals.GoalBlock(x, y, z));
-      }
-    } catch (e) {
-      console.log('Pathing Error Ignored:', e.message);
-    }
-  }
-
-  // ক্র্যাশ হ্যান্ডলিং (যাতে জয়েন করে হুট করে বের না হয়)
+  // ডিসকানেক্ট হলে হঠাৎ সাথে সাথে ট্রাই করবে না, ৩০ সেকেন্ড পর একবার ট্রাই করবে
   bot.on('end', (reason) => {
-    console.log(`Disconnected (${reason}). Reconnecting in 15 seconds...`);
-    setTimeout(createBot, 15000);
+    console.log(`Bot disconnected (${reason}). Waiting 30 seconds before trying again...`);
+    
+    if (!isReconnecting) {
+      isReconnecting = true;
+      setTimeout(() => {
+        createBot();
+      }, 30000); // ৩০ সেকেন্ডের বিরতি
+    }
   });
 
-  bot.on('error', err => console.log('Bot error:', err.message));
+  bot.on('error', (err) => {
+    console.log('Connection error:', err.message);
+  });
 }
 
-// কোনো আনহ্যান্ডেল্ড ক্র্যাশ হলে যেন প্রসেস বন্ধ না হয়ে যায়
 process.on('uncaughtException', (err) => {
-  console.log('Caught exception:', err.message);
+  console.log('System Handled Exception:', err.message);
 });
 
 createBot();
