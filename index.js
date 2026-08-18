@@ -3,6 +3,9 @@ const pathfinderPlugin = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const goals = require('mineflayer-pathfinder').goals;
 
+// আপনার মাইনক্রাফট ইউজারনেম এখানে লিখে দিতে পারেন (যাতে শুধু আপনিই কমান্ড দিতে পারেন)
+const OWNER_USERNAME = ''; // অথবা আপনার ইন-গেম নাম এখানে বসাতে পারেন (খালি রাখলে যেকেউ প্রিফিক্স দিয়ে কমান্ড দিতে পারবে)
+
 function createBot() {
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
@@ -14,24 +17,76 @@ function createBot() {
 
   bot.loadPlugin(pathfinderPlugin);
 
-  let spawnPos = null;
-
   bot.once('spawn', () => {
-    console.log('Bot successfully joined!');
-    
-    // বট যেখানেই নামবে, সেই জায়গাকেই তার 'Home' বানিয়ে নেবে
-    spawnPos = bot.entity.position.clone();
+    console.log('Bot successfully joined and ready for secure commands!');
+    bot.chat('Bot is online! Use !follow, !sleep, or !stop');
 
     try {
       const defaultMove = new Movements(bot);
       defaultMove.canDig = false;
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
+  });
 
-    // প্রতি ৭ সেকেন্ড পর পর সিদ্ধান্ত নেবে
-    setInterval(() => {
-      handleBotActions(bot);
-    }, 7000);
+  // সিকিউর চ্যাট কমান্ড হ্যান্ডলার
+  bot.on('chat', async (username, message) => {
+    if (username === bot.username) return;
+
+    // কমান্ডের শুরুতে অবশ্যই '!' থাকতে হবে (যেমন: !follow)
+    if (!message.startsWith('!')) return;
+
+    const args = message.slice(1).toLowerCase().trim().split(' ');
+    const command = args[0];
+
+    // ১. ফলো কমান্ড: !follow
+    if (command === 'follow') {
+      const target = bot.players[username] ? bot.players[username].entity : null;
+      if (!target) {
+        bot.chat(`${username}, I can't see you!`);
+        return;
+      }
+      bot.chat(`Following you, ${username}!`);
+      try {
+        bot.pathfinder.setGoal(new goals.GoalFollow(target, 1), true);
+      } catch (e) {
+        bot.chat('Could not follow.');
+      }
+    }
+
+    // ২. ঘুমানোর কমান্ড: !sleep
+    else if (command === 'sleep') {
+      const bedBlock = bot.findBlock({
+        matching: block => bot.isABed(block),
+        maxDistance: 10
+      });
+
+      if (bedBlock) {
+        bot.chat('Going to sleep...');
+        try {
+          await bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+          setTimeout(async () => {
+            try {
+              await bot.sleep(bedBlock);
+              bot.chat('Good night!');
+            } catch (err) {
+              bot.chat('Failed to sleep.');
+            }
+          }, 3000);
+        } catch (e) {
+          bot.chat('Path to bed failed.');
+        }
+      } else {
+        bot.chat('No bed found nearby!');
+      }
+    }
+
+    // ৩. থামার কমান্ড: !stop
+    else if (command === 'stop') {
+      try {
+        bot.pathfinder.stop();
+        bot.chat('Stopped!');
+      } catch (e) {}
+    }
   });
 
   bot.on('death', () => {
@@ -40,55 +95,6 @@ function createBot() {
       try { bot.respawn(); } catch (e) {}
     }, 3000);
   });
-
-  async function handleBotActions(bot) {
-    if (!bot || !bot.entity) return;
-
-    // ১. রাত হলে বা বৃষ্টি হলে ঘুমাবে
-    if (bot.time && (bot.time.isNight || bot.isRaining)) {
-      const bedBlock = bot.findBlock({
-        matching: block => bot.isABed(block),
-        maxDistance: 6
-      });
-
-      if (bedBlock) {
-        try {
-          // প্রথমে বেডের ব্লকে যাওয়ার জন্য গোল সেট করা হলো
-          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-          
-          // সামান্য সময় অপেক্ষা করে বেড অ্যাক্টিভেট বা ঘুম দেওয়ার চেষ্টা করবে
-          setTimeout(async () => {
-            try {
-              await bot.sleep(bedBlock);
-              console.log('Bot is now sleeping!');
-            } catch (err) {
-              // যদি সরাসরি sleep না হয়, ব্লক ইউজ করার চেষ্টা করবে
-              try {
-                await bot.activateBlock(bedBlock);
-              } catch (e) {}
-            }
-          }, 2000);
-
-        } catch (err) {
-          console.log('Sleep error:', err.message);
-        }
-      }
-    } else {
-      // ২. দিনের বেলা স্পন পয়েন্ট বা বর্তমান অবস্থানের চারপাশে ৩ ব্লক হাঁটাচলা করবে
-      if (spawnPos) {
-        const rx = Math.floor(Math.random() * 7) - 3; // -৩ থেকে +৩ ব্লক
-        const rz = Math.floor(Math.random() * 7) - 3;
-        
-        try {
-          bot.pathfinder.setGoal(new goals.GoalBlock(
-            Math.floor(spawnPos.x) + rx,
-            Math.floor(spawnPos.y),
-            Math.floor(spawnPos.z) + rz
-          ));
-        } catch (e) {}
-      }
-    }
-  }
 
   bot.on('end', (reason) => {
     console.log(`Bot disconnected: ${reason}. Reconnecting in 20s...`);
