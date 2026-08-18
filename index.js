@@ -19,7 +19,7 @@ function createBot() {
   bot.once('spawn', () => {
     console.log('Bot successfully joined!');
     
-    // বট যেখানেই নামবে, সেই জায়গাকেই তার 'Home' বানিয়ে নেবে
+    // বট যেখানেই নামবে, সেই জায়গাকেই তার 'Home' বানিয়ে নেবে
     spawnPos = bot.entity.position.clone();
 
     try {
@@ -53,16 +53,28 @@ function createBot() {
 
       if (bedBlock) {
         try {
-          // বেডের দিকে একটু এগিয়ে গিয়ে শোবে
+          // প্রথমে বেডের ব্লকে যাওয়ার জন্য গোল সেট করা হলো
           bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-          await bot.sleep(bedBlock);
-          console.log('Bot is now sleeping!');
+          
+          // সামান্য সময় অপেক্ষা করে বেড অ্যাক্টিভেট বা ঘুম দেওয়ার চেষ্টা করবে
+          setTimeout(async () => {
+            try {
+              await bot.sleep(bedBlock);
+              console.log('Bot is now sleeping!');
+            } catch (err) {
+              // যদি সরাসরি sleep না হয়, ব্লক ইউজ করার চেষ্টা করবে
+              try {
+                await bot.activateBlock(bedBlock);
+              } catch (e) {}
+            }
+          }, 2000);
+
         } catch (err) {
           console.log('Sleep error:', err.message);
         }
       }
     } else {
-      // ২. দিনের বেলা স্পন পয়েন্ট বা বর্তমান অবস্থানের চারপাশে ৩ ব্লক হাঁটাচলা করবে
+      // ২. দিনের বেলা স্পন পয়েন্ট বা বর্তমান অবস্থানের চারপাশে ৩ ব্লক হাঁটাচলা করবে
       if (spawnPos) {
         const rx = Math.floor(Math.random() * 7) - 3; // -৩ থেকে +৩ ব্লক
         const rz = Math.floor(Math.random() * 7) - 3;
