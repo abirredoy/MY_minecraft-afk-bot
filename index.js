@@ -3,19 +3,24 @@ const pathfinderPlugin = require('mineflayer-pathfinder').pathfinder;
 const Movements = require('mineflayer-pathfinder').Movements;
 const goals = require('mineflayer-pathfinder').goals;
 
+// এখানে আপনার ইন-গেম নাম দিতে পারেন (যেমন: 'ZenoXAbir')। ফাঁকা রাখলে সবাই কন্ট্রোল করতে পারবে।
+const OWNER_USERNAME = ''; 
+
 function createBot() {
+  console.log('Initializing bot connection...');
+
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
-    checkTimeoutInterval: 60 * 1000
+    checkTimeoutInterval: 120 * 1000 // টাইমআউট বাড়িয়ে ২ মিনিট করা হলো, যাতে কিক না খায়
   });
 
   bot.loadPlugin(pathfinderPlugin);
 
   bot.once('spawn', () => {
-    console.log('Bot successfully joined!');
+    console.log('Bot successfully joined and stable!');
     bot.chat('Bot is online! Commands: !follow, !sleep, !stop');
 
     try {
@@ -29,6 +34,11 @@ function createBot() {
   bot.on('chat', async (username, message) => {
     if (username === bot.username) return;
     if (!message.startsWith('!')) return;
+
+    if (OWNER_USERNAME && OWNER_USERNAME.toLowerCase() !== username.toLowerCase()) {
+      bot.chat(`${username}, You are not allowed to control me!`);
+      return;
+    }
 
     const args = message.slice(1).toLowerCase().trim().split(' ');
     const command = args[0];
@@ -46,7 +56,6 @@ function createBot() {
         bot.pathfinder.setGoal(new goals.GoalFollow(targetPlayer.entity, 1), true);
       } catch (err) {
         console.log('Follow error:', err.message);
-        bot.chat('Failed to follow.');
       }
     }
 
@@ -69,7 +78,7 @@ function createBot() {
             } catch (e) {
               bot.chat('Could not sleep in the bed.');
             }
-          }, 2500);
+          }, 3000);
         } else {
           bot.chat('No bed found nearby!');
         }
@@ -92,26 +101,31 @@ function createBot() {
   });
 
   bot.on('death', () => {
-    console.log('Bot died! Respawning...');
+    console.log('Bot died! Respawning in 5s...');
     setTimeout(() => {
       try { bot.respawn(); } catch (e) {}
-    }, 3000);
+    }, 5000);
   });
 
+  // ডিসকানেক্ট হলে হঠাৎ সাথে সাথে ট্রাই না করে ৬০ সেকেন্ড অপেক্ষা করবে (লুপ বন্ধ করতে)
   bot.on('end', (reason) => {
-    console.log(`Bot disconnected: ${reason}. Reconnecting in 20s...`);
-    setTimeout(createBot, 20000);
+    console.log(`Bot disconnected: ${reason}. Reconnecting in 60 seconds...`);
+    setTimeout(() => {
+      createBot();
+    }, 60000); // ৬০ সেকেন্ড বিরতি
   });
 
-  bot.on('error', err => console.log('Bot error:', err.message));
+  bot.on('error', err => {
+    console.log('Bot connection error:', err.message);
+  });
 }
 
-// গেম ক্র্যাশ রোধ করার গ্লোবাল হ্যান্ডলার
+// গেম ক্র্যাশ রোধ করতে গ্লোবাল সেফটি
 process.on('uncaughtException', (err) => {
-  console.log('Caught unhandled exception:', err.message);
+  console.log('Caught system exception:', err.message);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
+process.on('unhandledRejection', (reason) => {
   console.log('Caught unhandled rejection:', reason);
 });
 
