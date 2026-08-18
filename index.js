@@ -16,14 +16,11 @@ function createBot() {
 
   bot.loadPlugin(pathfinderPlugin);
 
-  let homePos = null;
-  let currentMode = 'auto'; // ডিফল্ট অটো মোড
+  let currentMode = 'idle'; // শুরুতে আইডিএল মোডে থাকবে, নিজে থেকে কিছু করবে না
 
   bot.once('spawn', () => {
     console.log('Bot successfully joined!');
-    bot.chat('Bot is online! Commands: !auto, !follow, !stop, !sleep');
-
-    homePos = bot.entity.position.clone();
+    bot.chat('Bot is online! Only ZenoXAbir can control me. Commands: !auto, !follow, !stop, !sleep');
 
     try {
       const defaultMove = new Movements(bot);
@@ -31,7 +28,7 @@ function createBot() {
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
 
-    // অটো মোড লুপ (প্রতি ৫ সেকেন্ড পর পর চেক করবে)
+    // অটো মোড লুপ
     setInterval(() => {
       if (currentMode === 'auto') {
         runAutoBehavior(bot);
@@ -39,7 +36,7 @@ function createBot() {
     }, 5000);
   });
 
-  // অটো মোড বিহেভিয়ার
+  // অটো মোড বিহেভিয়ার (শুধু !auto দিলেই কাজ করবে)
   async function runAutoBehavior(bot) {
     if (!bot || !bot.entity || bot.isSleeping) return;
 
@@ -61,24 +58,10 @@ function createBot() {
         return;
       }
     } catch (e) {}
-
-    if (homePos && !bot.pathfinder.isMoving()) {
-      const rx = Math.floor(Math.random() * 9) - 4;
-      const rz = Math.floor(Math.random() * 9) - 4;
-
-      try {
-        bot.pathfinder.setGoal(new goals.GoalBlock(
-          Math.floor(homePos.x) + rx,
-          Math.floor(homePos.y),
-          Math.floor(homePos.z) + rz
-        ));
-      } catch (e) {}
-    }
   }
 
-  // সহজ ও শক্তিশালী চ্যাট লিসেনার (চ্যাট ইভেন্ট ব্যবহার করা হয়েছে)
+  // চ্যাট কমান্ড হ্যান্ডলার
   bot.on('chat', (username, message) => {
-    // নিজের পাঠানো মেসেজ ইগনোর করবে
     if (username === bot.username) return;
 
     console.log(`Chat from ${username}: ${message}`);
