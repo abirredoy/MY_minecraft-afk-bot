@@ -1,152 +1,116 @@
 const mineflayer = require('mineflayer');
-const pathfinderPlugin = require('mineflayer-pathfinder').pathfinder;
-const Movements = require('mineflayer-pathfinder').Movements;
-const goals = require('mineflayer-pathfinder').goals;
+const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 
-function createBot() {
-  console.log('Starting bot connection...');
+function startBot() {
+  console.log('Connecting to server...');
 
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
     username: 'ADMIN',
-    version: '1.21.1',
-    checkTimeoutInterval: 120 * 1000
+    version: '1.21.1'
   });
 
-  bot.loadPlugin(pathfinderPlugin);
-
-  let currentMode = 'idle'; // শুরুতে আইডিএল মোডে থাকবে, নিজে থেকে কিছু করবে না
+  // পাথফাইন্ডার প্লাগইন লোড করা
+  bot.loadPlugin(pathfinder);
 
   bot.once('spawn', () => {
-    console.log('Bot successfully joined!');
-    bot.chat('Bot is online! Only ZenoXAbir can control me. Commands: !auto, !follow, !stop, !sleep');
+    console.log('Bot spawned successfully in the world!');
+    bot.chat('Bot is online! Ready for ZenoXAbir commands: !follow, !stop, !sleep, !coords');
 
+    // মুভমেন্ট কনফিগারেশন
     try {
       const defaultMove = new Movements(bot);
       defaultMove.canDig = false;
       bot.pathfinder.setMovements(defaultMove);
-    } catch (e) {}
-
-    // অটো মোড লুপ
-    setInterval(() => {
-      if (currentMode === 'auto') {
-        runAutoBehavior(bot);
-      }
-    }, 5000);
+    } catch (err) {
+      console.log('Movement setup error:', err);
+    }
   });
 
-  // অটো মোড বিহেভিয়ার (শুধু !auto দিলেই কাজ করবে)
-  async function runAutoBehavior(bot) {
-    if (!bot || !bot.entity || bot.isSleeping) return;
-
-    try {
-      const bedBlock = bot.findBlock({
-        matching: block => bot.isABed(block),
-        maxDistance: 12
-      });
-
-      if (bedBlock) {
-        bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-        setTimeout(async () => {
-          try {
-            if (!bot.isSleeping) {
-              await bot.sleep(bedBlock);
-            }
-          } catch (e) {}
-        }, 2000);
-        return;
-      }
-    } catch (e) {}
-  }
-
-  // চ্যাট কমান্ড হ্যান্ডলার
+  // চ্যাট কমান্ড হ্যান্ডলার (সরাসরি মাইনফ্লায়ারের নিজস্ব চ্যাট ইভেন্ট)
   bot.on('chat', (username, message) => {
+    // নিজের মেসেজ ইগনোর করবে
     if (username === bot.username) return;
 
-    console.log(`Chat from ${username}: ${message}`);
+    console.log(`[CHAT] ${username}: ${message}`);
 
-    // শুধুমাত্র ZenoXAbir এর কমান্ড শুনবে
+    // ১. শুধু ZenoXAbir এর কমান্ড ফিল্টার করা
     if (username !== 'ZenoXAbir') return;
+
+    // ২. কমান্ড চেক করা (! দিয়ে শুরু কিনা)
     if (!message.startsWith('!')) return;
 
     const command = message.slice(1).toLowerCase().trim();
-    console.log(`Command executed: ${command}`);
+    console.log(`Executing command from ZenoXAbir: ${command}`);
 
-    if (command === 'auto') {
-      currentMode = 'auto';
-      bot.chat('Switched to Auto mode!');
-    }
-    else if (command === 'follow') {
-      currentMode = 'follow';
-      
-      let target = null;
-      if (bot.players['ZenoXAbir'] && bot.players['ZenoXAbir'].entity) {
-        target = bot.players['ZenoXAbir'].entity;
-      } else {
-        const playerEntity = Object.values(bot.entities).find(e => e.type === 'player' && e.username === 'ZenoXAbir');
-        if (playerEntity) target = playerEntity;
-      }
-
-      if (!target) {
-        bot.chat('ZenoXAbir, I can\'t see you nearby!');
+    // ৩. কমান্ড অনুযায়ী কাজ করা
+    if (command === 'follow') {
+      const targetPlayer = bot.players['ZenoXAbir'];
+      if (!targetPlayer || !targetPlayer.entity) {
+        bot.chat('ZenoXAbir, I cannot see you nearby!');
         return;
       }
 
       bot.chat('Following you, ZenoXAbir!');
+      const p = targetPlayer.entity.position;
+      bot.pathfinder.setGoal(new goals.GoalFollow(targetPlayer.entity, 1), true);
+    }
+    else if (command === 'stop') {
       try {
-        bot.pathfinder.setGoal(new goals.GoalFollow(target, 1), true);
-      } catch (err) {}
+        bot.pathfinder.stop();
+        bot.clearControlStates();
+        bot.chat('Stopped everything!');
+      } catch (err) {
+        bot.chat('Failed to stop.');
+      }
     }
     else if (command === 'sleep') {
-      currentMode = 'manual';
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
         maxDistance: 15
       });
 
-      if (bedBlock) {
-        bot.chat('Going to bed...');
-        try {
-          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-          setTimeout(async () => {
-            try {
-              await bot.sleep(bedBlock);
-              bot.chat('Good night!');
-            } catch (e) {
-              bot.chat('Could not sleep.');
-            }
-          }, 2000);
-        } catch (err) {}
-      } else {
+      if (!bedBlock) {
         bot.chat('No bed found nearby!');
+        return;
       }
+
+      bot.chat('Heading to bed...');
+      bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+
+      bot.once('goal_reached', async () => {
+        try {
+          await bot.sleep(bedBlock);
+          bot.chat('Good night, ZenoXAbir!');
+        } catch (err) {
+          bot.chat('Could not sleep right now.');
+        }
+      });
     }
-    else if (command === 'stop') {
-      currentMode = 'stop';
-      try {
-        bot.pathfinder.stop();
-        bot.chat('Stopped!');
-      } catch (err) {}
+    else if (command === 'coords') {
+      const pos = bot.entity.position;
+      bot.chat(`My current pos: X: ${Math.floor(pos.x)}, Y: ${Math.floor(pos.y)}, Z: ${Math.floor(pos.z)}`);
     }
   });
 
-  bot.on('death', () => {
-    console.log('Bot died! Respawning...');
-    setTimeout(() => {
-      try { bot.respawn(); } catch (e) {}
-    }, 3000);
+  // ডিসকানেক্ট বা ক্র্যাশ হ্যান্ডলিং
+  bot.on('kicked', (reason) => console.log('Kicked from server:', reason));
+  bot.on('error', (err) => console.log('Bot error:', err));
+  
+  bot.on('end', () => {
+    console.log('Bot disconnected. Reconnecting in 10 seconds...');
+    setTimeout(startBot, 10000);
   });
-
-  bot.on('end', (reason) => {
-    console.log(`Disconnected: ${reason}. Reconnecting in 20s...`);
-    setTimeout(createBot, 20000);
-  });
-
-  bot.on('error', err => {});
 }
 
-process.on('uncaughtException', (err) => {});
-process.on('unhandledRejection', (reason) => {});
+// আনহ্যান্ডলড এরর হ্যান্ডেল করার জন্য যাতে প্রজেক্ট ক্র্যাশ না করে
+process.on('uncaughtException', (err) => {
+  console.log('Uncaught Exception:', err.message);
+});
 
-createBot();
+process.on('unhandledRejection', (reason) => {
+  console.log('Unhandled Rejection:', reason);
+});
+
+startBot();
