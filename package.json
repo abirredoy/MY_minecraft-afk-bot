@@ -1,7 +1,6 @@
 {
   "name": "minecraft-bot",
   "version": "1.0.0",
-  "description": "Stable Mineflayer Bot",
   "main": "index.js",
   "dependencies": {
     "mineflayer": "^4.20.0",
