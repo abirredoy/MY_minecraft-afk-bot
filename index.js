@@ -11,7 +11,7 @@ function createBot() {
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
-    checkTimeoutInterval: 600 * 1000
+    checkTimeoutInterval: 1200 * 1000
   });
 
   bot.loadPlugin(pathfinder);
@@ -26,17 +26,44 @@ function createBot() {
     } catch (e) {}
   });
 
-  const interval = setInterval(() => {
+  const interval = setInterval(async () => {
     if (!bot.entity) return;
 
     try {
+      if (bot.time.isNight || bot.isRaining) {
+        const bed = bot.findBlock({
+          matching: block => bot.isABed(block),
+          maxDistance: 32
+        });
+
+        if (bed) {
+          try {
+            await bot.sleep(bed);
+            return;
+          } catch (err) {}
+        }
+      }
+
       if (!bot.pathfinder.isMoving()) {
-        const rx = Math.floor(Math.random() * 7) - 3;
-        const rz = Math.floor(Math.random() * 7) - 3;
-        
-        const targetX = bot.entity.position.x + rx;
-        const targetZ = bot.entity.position.z + rz;
+        const nearbyBed = bot.findBlock({
+          matching: block => bot.isABed(block),
+          maxDistance: 16
+        });
+
+        let targetX, targetZ;
         const targetY = bot.entity.position.y;
+
+        if (nearbyBed) {
+          const rx = Math.floor(Math.random() * 9) - 4;
+          const rz = Math.floor(Math.random() * 9) - 4;
+          targetX = nearbyBed.position.x + rx;
+          targetZ = nearbyBed.position.z + rz;
+        } else {
+          const rx = Math.floor(Math.random() * 13) - 6;
+          const rz = Math.floor(Math.random() * 13) - 6;
+          targetX = bot.entity.position.x + rx;
+          targetZ = bot.entity.position.z + rz;
+        }
 
         bot.pathfinder.setGoal(new goals.GoalBlock(targetX, targetY, targetZ));
       }
