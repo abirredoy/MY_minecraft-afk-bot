@@ -30,26 +30,26 @@ function createBot() {
     if (!bot.entity) return;
 
     try {
-      // ১. প্রথমে আশপাশে বেড আছে কি না তা খুঁজে বের করা
       const bedBlock = bot.findBlock({
         matching: block => block.name.includes('bed'),
         maxDistance: 32
       });
 
       if (bedBlock) {
-        // সার্ভারে রাত হলে বা বৃষ্টি হলে সরাসরি বেডে গিয়ে ঘুমানোর চেষ্টা করবে
         if (bot.time.isNight || bot.isRaining) {
-          try {
-            await bot.sleep(bedBlock);
-            return;
-          } catch (err) {
-            // যদি সরাসরি ঘুমাতে না পারে, তবে বেডের একদম কাছে চলে যাবে
+          const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
+          
+          if (distanceToBed <= 2) {
+            try {
+              await bot.sleep(bedBlock);
+              return;
+            } catch (err) {}
+          } else {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
             return;
           }
         }
 
-        // ২. দিনের বেলা বা সাধারণ সময়ে বেডের আশপাশেই (৪-৬ ব্লকের মধ্যে) ঘোরাফেরা করবে
         const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
         if (distanceToBed > 6 || !bot.pathfinder.isMoving()) {
           const rx = Math.floor(Math.random() * 7) - 3;
@@ -57,7 +57,6 @@ function createBot() {
           bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
         }
       } else {
-        // যদি আশপাশে কোনো বেড না থাকে, তবে সাধারণ র্যান্ডম ঘোরাফেরা করবে
         if (!bot.pathfinder.isMoving()) {
           const rx = Math.floor(Math.random() * 13) - 6;
           const rz = Math.floor(Math.random() * 13) - 6;
