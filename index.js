@@ -39,22 +39,30 @@ function createBot() {
         if (bot.time.isNight || bot.isRaining) {
           const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
           
-          if (distanceToBed <= 2) {
-            try {
-              await bot.sleep(bedBlock);
-              return;
-            } catch (err) {}
+          if (distanceToBed <= 2.5) {
+            if (!bot.isSleeping) {
+              bot.pathfinder.stop();
+              try {
+                await bot.sleep(bedBlock);
+                console.log("Bot is sleeping!");
+                return;
+              } catch (err) {
+                console.log("Sleep error:", err.message);
+              }
+            }
           } else {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
             return;
           }
         }
 
-        const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
-        if (distanceToBed > 4 || !bot.pathfinder.isMoving()) {
-          const rx = Math.floor(Math.random() * 5) - 2;
-          const rz = Math.floor(Math.random() * 5) - 2;
-          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
+        if (!bot.isSleeping) {
+          const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
+          if (distanceToBed > 4 || !bot.pathfinder.isMoving()) {
+            const rx = Math.floor(Math.random() * 5) - 2;
+            const rz = Math.floor(Math.random() * 5) - 2;
+            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
+          }
         }
       } else {
         if (!bot.pathfinder.isMoving()) {
