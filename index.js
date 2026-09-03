@@ -7,7 +7,7 @@ function createBot() {
   const bot = mineflayer.createBot({
     host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
-    username: 'POOKIE',
+    username: 'ADMIN',
     version: '1.21.1',
     checkTimeoutInterval: 120 * 1000
   });
