@@ -36,7 +36,10 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        if (bot.time && (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459 || bot.isRaining)) {
+        // শুধুমাত্র রাত বা বৃষ্টি হলেই ঘুমানোর লজিক কাজ করবে
+        const isNightTime = bot.time && (bot.time.isNight || (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459));
+
+        if (isNightTime || bot.isRaining) {
           if (dist <= 3 && !bot.isSleeping) {
             bot.pathfinder.stop();
             bot.pathfinder.setGoal(null);
@@ -53,12 +56,13 @@ function createBot() {
           }
         }
 
+        // দিনের বেলা বা সাধারণ সময়ে শুধু কাছে যাওয়া এবং আশপাশে ঘোরাফেরা করা
         if (dist > 3) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } else {
-          if (!bot.pathfinder.isMoving()) {
+          if (!bot.pathfinder.isMoving() && !(isNightTime || bot.isRaining)) {
             const rx = Math.floor(Math.random() * 5) - 2;
             const rz = Math.floor(Math.random() * 5) - 2;
             bot.pathfinder.setGoal(new goals.GoalBlock(
