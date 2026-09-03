@@ -1,6 +1,9 @@
 const mineflayer = require('mineflayer');
 const { pathfinder, Movements, goals } = require('mineflayer-pathfinder');
 
+// ইভেন্ট লিসেনার ওয়ার্নিং ও মেমোরি লিক রোধ করার জন্য লিমিট বাড়িয়ে দেওয়া হলো
+process.setMaxListeners(30);
+
 function createBot() {
   console.log('Connecting to server...');
 
@@ -25,7 +28,7 @@ function createBot() {
   });
 
   // সম্পূর্ণ স্বয়ংক্রিয় লুপ (প্রতি ৫ সেকেন্ড পর পর কাজ করবে)
-  setInterval(() => {
+  const interval = setInterval(() => {
     if (!bot.entity || bot.isSleeping) return;
 
     try {
@@ -78,16 +81,17 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
+  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে আগের ইন্টারভাল ক্লিয়ার করে নতুন করে জয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
+    clearInterval(interval);
     setTimeout(createBot, 10000);
   });
 
   bot.on('error', err => {});
 }
 
-process.on('uncaughtException', () => {});
-process.on('unhandledRejection', () => {});
+process.on('uncaughtException', (err) => {});
+process.on('unhandledRejection', (reason, promise) => {});
 
 createBot();
