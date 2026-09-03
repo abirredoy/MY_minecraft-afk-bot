@@ -30,42 +30,39 @@ function createBot() {
     if (!bot.entity) return;
 
     try {
-      if (bot.time.isNight || bot.isRaining) {
-        const bed = bot.findBlock({
-          matching: block => bot.isABed(block),
-          maxDistance: 32
-        });
+      // ১. প্রথমে আশপাশে বেড আছে কি না তা খুঁজে বের করা
+      const bedBlock = bot.findBlock({
+        matching: block => block.name.includes('bed'),
+        maxDistance: 32
+      });
 
-        if (bed) {
+      if (bedBlock) {
+        // সার্ভারে রাত হলে বা বৃষ্টি হলে সরাসরি বেডে গিয়ে ঘুমানোর চেষ্টা করবে
+        if (bot.time.isNight || bot.isRaining) {
           try {
-            await bot.sleep(bed);
+            await bot.sleep(bedBlock);
             return;
-          } catch (err) {}
+          } catch (err) {
+            // যদি সরাসরি ঘুমাতে না পারে, তবে বেডের একদম কাছে চলে যাবে
+            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+            return;
+          }
         }
-      }
 
-      if (!bot.pathfinder.isMoving()) {
-        const nearbyBed = bot.findBlock({
-          matching: block => bot.isABed(block),
-          maxDistance: 16
-        });
-
-        let targetX, targetZ;
-        const targetY = bot.entity.position.y;
-
-        if (nearbyBed) {
-          const rx = Math.floor(Math.random() * 9) - 4;
-          const rz = Math.floor(Math.random() * 9) - 4;
-          targetX = nearbyBed.position.x + rx;
-          targetZ = nearbyBed.position.z + rz;
-        } else {
+        // ২. দিনের বেলা বা সাধারণ সময়ে বেডের আশপাশেই (৪-৬ ব্লকের মধ্যে) ঘোরাফেরা করবে
+        const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
+        if (distanceToBed > 6 || !bot.pathfinder.isMoving()) {
+          const rx = Math.floor(Math.random() * 7) - 3;
+          const rz = Math.floor(Math.random() * 7) - 3;
+          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
+        }
+      } else {
+        // যদি আশপাশে কোনো বেড না থাকে, তবে সাধারণ র্যান্ডম ঘোরাফেরা করবে
+        if (!bot.pathfinder.isMoving()) {
           const rx = Math.floor(Math.random() * 13) - 6;
           const rz = Math.floor(Math.random() * 13) - 6;
-          targetX = bot.entity.position.x + rx;
-          targetZ = bot.entity.position.z + rz;
+          bot.pathfinder.setGoal(new goals.GoalBlock(bot.entity.position.x + rx, bot.entity.position.y, bot.entity.position.z + rz));
         }
-
-        bot.pathfinder.setGoal(new goals.GoalBlock(targetX, targetY, targetZ));
       }
     } catch (e) {}
   }, 10000);
