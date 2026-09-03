@@ -12,7 +12,8 @@ function createBot() {
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
-    checkTimeoutInterval: 120 * 1000
+    // টাইমআউটজনিত সমস্যা এড়াতে সময় বাড়িয়ে ৬০০ সেকেন্ড (১০ মিনিট) করা হলো
+    checkTimeoutInterval: 600 * 1000
   });
 
   bot.loadPlugin(pathfinder);
@@ -81,14 +82,16 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে আগের ইন্টারভাল ক্লিয়ার করে নতুন করে জয়েন নেবে
+  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে আগের ইন্টারভাল ক্লিয়ার করে নতুন করে জয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     clearInterval(interval);
     setTimeout(createBot, 10000);
   });
 
-  bot.on('error', err => {});
+  bot.on('error', err => {
+    console.log('Bot error:', err);
+  });
 }
 
 process.on('uncaughtException', (err) => {});
