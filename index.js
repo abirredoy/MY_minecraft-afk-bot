@@ -24,10 +24,12 @@ function createBot() {
     } catch (e) {}
   });
 
+  // সম্পূর্ণ স্বয়ংক্রিয় লুপ (প্রতি ৫ সেকেন্ড পর পর কাজ করবে)
   setInterval(() => {
     if (!bot.entity || bot.isSleeping) return;
 
     try {
+      // ১. সবচেয়ে কাছের বেড খুঁজে বের করা (যত দূরেই হোক)
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
         maxDistance: 64
@@ -36,34 +38,27 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        // শুধুমাত্র রাত বা বৃষ্টি হলেই ঘুমানোর লজিক কাজ করবে
-        const isNightTime = bot.time && (bot.time.isNight || (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459));
-
-        if (isNightTime || bot.isRaining) {
-          if (dist <= 3 && !bot.isSleeping) {
-            bot.pathfinder.stop();
-            bot.pathfinder.setGoal(null);
+        // ২. যদি রাত হয় এবং বেডের কাছাকাছি থাকে, তবে সোজা ঘুমিয়ে পড়বে
+        if (bot.time && (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459)) {
+          if (dist <= 4 && !bot.isSleeping) {
+            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
             setTimeout(async () => {
-              try { 
-                await bot.sleep(bedBlock); 
-              } catch (e) {
-                try {
-                  await bot.activateBlock(bedBlock);
-                } catch (err) {}
-              }
-            }, 500);
+              try { await bot.sleep(bedBlock); } catch (e) {}
+            }, 1000);
             return;
           }
         }
 
-        // দিনের বেলা বা সাধারণ সময়ে শুধু কাছে যাওয়া এবং আশপাশে ঘোরাফেরা করা
+        // ৩. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
         if (dist > 3) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
-        } else {
-          if (!bot.pathfinder.isMoving() && !(isNightTime || bot.isRaining)) {
-            const rx = Math.floor(Math.random() * 5) - 2;
+        } 
+        // ৪. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
+        else {
+          if (!bot.pathfinder.isMoving()) {
+            const rx = Math.floor(Math.random() * 5) - 2; // -2 থেকে +2 ব্লকের মধ্যে
             const rz = Math.floor(Math.random() * 5) - 2;
             bot.pathfinder.setGoal(new goals.GoalBlock(
               bedBlock.position.x + rx,
@@ -83,6 +78,7 @@ function createBot() {
     }, 3000);
   });
 
+  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     setTimeout(createBot, 10000);
