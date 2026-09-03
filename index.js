@@ -35,44 +35,41 @@ function createBot() {
         maxDistance: 64
       });
 
-      if (bedBlock) {
-        if (bot.time.isNight || bot.isRaining) {
-          const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
-          
-          if (distanceToBed <= 2.5) {
-            if (!bot.isSleeping) {
-              bot.pathfinder.stop();
-              try {
-                await bot.sleep(bedBlock);
-                console.log("Bot is sleeping!");
-                return;
-              } catch (err) {
-                console.log("Sleep error:", err.message);
-              }
-            }
-          } else {
-            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-            return;
-          }
+      if (!bedBlock) {
+        if (!bot.pathfinder.isMoving()) {
+          const rx = Math.floor(Math.random() * 11) - 5;
+          const rz = Math.floor(Math.random() * 11) - 5;
+          bot.pathfinder.setGoal(new goals.GoalBlock(bot.entity.position.x + rx, bot.entity.position.y, bot.entity.position.z + rz));
         }
+        return;
+      }
 
+      const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
+
+      if (bot.time.isNight || bot.isRaining) {
+        if (distanceToBed <= 2.5) {
+          bot.pathfinder.stop();
+          if (!bot.isSleeping) {
+            try {
+              await bot.sleep(bedBlock);
+            } catch (err) {
+              bot.activateBlock(bedBlock);
+            }
+          }
+        } else {
+          bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+        }
+      } else {
         if (!bot.isSleeping) {
-          const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
           if (distanceToBed > 4 || !bot.pathfinder.isMoving()) {
             const rx = Math.floor(Math.random() * 5) - 2;
             const rz = Math.floor(Math.random() * 5) - 2;
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
           }
         }
-      } else {
-        if (!bot.pathfinder.isMoving()) {
-          const rx = Math.floor(Math.random() * 11) - 5;
-          const rz = Math.floor(Math.random() * 11) - 5;
-          bot.pathfinder.setGoal(new goals.GoalBlock(bot.entity.position.x + rx, bot.entity.position.y, bot.entity.position.z + rz));
-        }
       }
     } catch (e) {}
-  }, 4000);
+  }, 3000);
 
   bot.on('death', () => {
     console.log('Bot died. Respawning...');
