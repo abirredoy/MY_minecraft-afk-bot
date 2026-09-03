@@ -32,14 +32,14 @@ function createBot() {
     try {
       const bedBlock = bot.findBlock({
         matching: block => block.name.includes('bed'),
-        maxDistance: 32
+        maxDistance: 64
       });
 
       if (bedBlock) {
         if (bot.time.isNight || bot.isRaining) {
           const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
           
-          if (distanceToBed <= 2) {
+          if (distanceToBed <= 3) {
             try {
               await bot.sleep(bedBlock);
               return;
@@ -51,9 +51,9 @@ function createBot() {
         }
 
         const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
-        if (distanceToBed > 6 || !bot.pathfinder.isMoving()) {
-          const rx = Math.floor(Math.random() * 7) - 3;
-          const rz = Math.floor(Math.random() * 7) - 3;
+        if (distanceToBed > 5 || !bot.pathfinder.isMoving()) {
+          const rx = Math.floor(Math.random() * 5) - 2;
+          const rz = Math.floor(Math.random() * 5) - 2;
           bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x + rx, bedBlock.position.y, bedBlock.position.z + rz));
         }
       } else {
@@ -64,7 +64,7 @@ function createBot() {
         }
       }
     } catch (e) {}
-  }, 10000);
+  }, 5000);
 
   bot.on('death', () => {
     console.log('Bot died. Respawning...');
