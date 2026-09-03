@@ -47,19 +47,28 @@ function createBot() {
       const distanceToBed = bot.entity.position.distanceTo(bedBlock.position);
 
       if (bot.time.isNight || bot.isRaining) {
-        if (distanceToBed <= 2.5) {
+        if (distanceToBed <= 3) {
           bot.pathfinder.stop();
           if (!bot.isSleeping) {
             try {
+              // সরাসরি রাইট-ক্লিক বা স্লিপ করার চেষ্টা
               await bot.sleep(bedBlock);
             } catch (err) {
-              bot.activateBlock(bedBlock);
+              try {
+                await bot.activateBlock(bedBlock);
+              } catch (e2) {}
             }
           }
         } else {
           bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
         }
       } else {
+        if (bot.isSleeping) {
+          try {
+            await bot.wake();
+          } catch (e) {}
+        }
+
         if (!bot.isSleeping) {
           if (distanceToBed > 4 || !bot.pathfinder.isMoving()) {
             const rx = Math.floor(Math.random() * 5) - 2;
