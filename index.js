@@ -5,7 +5,7 @@ function createBot() {
   console.log('Connecting to server...');
 
   const bot = mineflayer.createBot({
-    host: 'ZenoXForce-Eqqx.aternos.me',
+    host: 'ZenoXForce.aternos.me',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
