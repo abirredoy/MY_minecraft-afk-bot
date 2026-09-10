@@ -2,6 +2,12 @@ name: Run Minecraft AFK Bot
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/10 * * * *'
+
+concurrency:
+  group: minecraft-bot
+  cancel-in-progress: true
 
 jobs:
   run-bot:
