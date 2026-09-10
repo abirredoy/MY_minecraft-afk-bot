@@ -55,10 +55,10 @@ function createBot() {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } 
-        // ৪. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
+        // ৪. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে ঘোরাঘুরি করবে
         else {
           if (!bot.pathfinder.isMoving()) {
-            const rx = Math.floor(Math.random() * 5) - 2; // -2 থেকে +2 ব্লকের মধ্যে
+            const rx = Math.floor(Math.random() * 5) - 2;
             const rz = Math.floor(Math.random() * 5) - 2;
             bot.pathfinder.setGoal(new goals.GoalBlock(
               bedBlock.position.x + rx,
@@ -78,7 +78,7 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
+  // সার্ভার থেকে ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     setTimeout(createBot, 10000);
