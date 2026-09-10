@@ -29,7 +29,7 @@ function createBot() {
     if (!bot.entity || bot.isSleeping) return;
 
     try {
-      // ১. সবচেয়ে কাছের বেড খুঁজে বের করা (যত দূরেই হোক)
+      // ১. সবচেয়ে কাছের বেড বা অন্য কোনো স্থান খুঁজে বের করা এবং ঘোরাঘুরি করা
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
         maxDistance: 64
@@ -38,30 +38,13 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        // ২. যদি রাত হয় এবং সার্ভারে অন্য কোনো প্লেয়ার কাছাকাছি থাকে (বট একা একা রাত স্কিপ করবে না)
-        if (bot.time && (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459)) {
-          // বটের ২০ ব্লকের মধ্যে অন্য কোনো প্লেয়ার আছে কি না তা চেক করা
-          const nearbyPlayer = bot.nearestEntity(entity => entity.type === 'player' && entity.username !== bot.username && bot.entity.position.distanceTo(entity.position) <= 20);
-
-          // যদি অন্য কোনো প্লেয়ার কাছাকাছি থাকে এবং বট বেডের ৪ ব্লকের মধ্যে থাকে, তবেই ঘুমাবে
-          if (nearbyPlayer) {
-            if (dist <= 4 && !bot.isSleeping) {
-              bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-              setTimeout(async () => {
-                try { await bot.sleep(bedBlock); } catch (e) {}
-              }, 1000);
-              return;
-            }
-          }
-        }
-
-        // ৩. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
+        // ২. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
         if (dist > 3) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } 
-        // ৪. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
+        // ৩. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
         else {
           if (!bot.pathfinder.isMoving()) {
             const rx = Math.floor(Math.random() * 5) - 2; // -2 থেকে +2 ব্লকের মধ্যে
