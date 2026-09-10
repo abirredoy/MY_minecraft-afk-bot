@@ -38,14 +38,20 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        // ২. যদি রাত হয় এবং বেডের কাছাকাছি থাকে, তবে সোজা ঘুমিয়ে পড়বে
+        // ২. যদি রাত হয় এবং সার্ভারে অন্য কোনো প্লেয়ার কাছাকাছি থাকে (বট একা একা রাত স্কিপ করবে না)
         if (bot.time && (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459)) {
-          if (dist <= 4 && !bot.isSleeping) {
-            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
-            setTimeout(async () => {
-              try { await bot.sleep(bedBlock); } catch (e) {}
-            }, 1000);
-            return;
+          // বটের ২০ ব্লকের মধ্যে অন্য কোনো প্লেয়ার আছে কি না তা চেক করা
+          const nearbyPlayer = bot.nearestEntity(entity => entity.type === 'player' && entity.username !== bot.username && bot.entity.position.distanceTo(entity.position) <= 20);
+
+          // যদি অন্য কোনো প্লেয়ার কাছাকাছি থাকে এবং বট বেডের ৪ ব্লকের মধ্যে থাকে, তবেই ঘুমাবে
+          if (nearbyPlayer) {
+            if (dist <= 4 && !bot.isSleeping) {
+              bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+              setTimeout(async () => {
+                try { await bot.sleep(bedBlock); } catch (e) {}
+              }, 1000);
+              return;
+            }
           }
         }
 
@@ -78,7 +84,7 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
+  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     setTimeout(createBot, 10000);
