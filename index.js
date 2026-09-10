@@ -5,7 +5,7 @@ function createBot() {
   console.log('Connecting to server...');
 
   const bot = mineflayer.createBot({
-    host: 'ZenoXForce.aternos.me',
+    host: 'ZenoXForce-Eqqx.aternos.me',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
@@ -29,7 +29,7 @@ function createBot() {
     if (!bot.entity || bot.isSleeping) return;
 
     try {
-      // ১. সবচেয়ে কাছের বেড বা অন্য কোনো স্থান খুঁজে বের করা এবং ঘোরাঘুরি করা
+      // ১. সবচেয়ে কাছের বেড খুঁজে বের করা (যত দূরেই হোক)
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
         maxDistance: 64
@@ -38,13 +38,24 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        // ২. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
+        // ২. যদি রাত হয় এবং বেডের কাছাকাছি থাকে, তবে সোজা ঘুমিয়ে পড়বে
+        if (bot.time && (bot.time.timeOfDay >= 12500 && bot.time.timeOfDay < 23459)) {
+          if (dist <= 4 && !bot.isSleeping) {
+            bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
+            setTimeout(async () => {
+              try { await bot.sleep(bedBlock); } catch (e) {}
+            }, 1000);
+            return;
+          }
+        }
+
+        // ৩. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
         if (dist > 3) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } 
-        // ৩. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
+        // ৪. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে
         else {
           if (!bot.pathfinder.isMoving()) {
             const rx = Math.floor(Math.random() * 5) - 2; // -2 থেকে +2 ব্লকের মধ্যে
@@ -67,7 +78,7 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
+  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     setTimeout(createBot, 10000);
