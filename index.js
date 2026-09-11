@@ -22,14 +22,17 @@ function createBot() {
       defaultMove.canDig = false;
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
+
+    setTimeout(() => {
+      console.log('Scheduled session end. Disconnecting bot...');
+      bot.quit();
+    }, 4 * 60 * 60 * 1000); 
   });
 
-  // সম্পূর্ণ স্বয়ংক্রিয় লুপ (প্রতি ৫ সেকেন্ড পর পর কাজ করবে)
   setInterval(() => {
     if (!bot.entity) return;
 
     try {
-      // ১. সবচেয়ে কাছের বেড খুঁজে বের করা (যত দূরেই হোক)
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
         maxDistance: 64
@@ -38,16 +41,14 @@ function createBot() {
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        // ২. যদি বেড থেকে দূরে থাকে, তবে সোজা বেডের কাছে চলে যাবে
         if (dist > 3) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } 
-        // ৩. বেডের কাছে পৌঁছে গেলে বা কাছাকাছি থাকলে, সেই বেডের আশপাশে এলোমেলো ঘোরাঘুরি করবে (কিন্তু ঘুমাবে না)
         else {
           if (!bot.pathfinder.isMoving()) {
-            const rx = Math.floor(Math.random() * 5) - 2; // -2 থেকে +2 ব্লকের মধ্যে
+            const rx = Math.floor(Math.random() * 5) - 2;
             const rz = Math.floor(Math.random() * 5) - 2;
             bot.pathfinder.setGoal(new goals.GoalBlock(
               bedBlock.position.x + rx,
@@ -67,7 +68,6 @@ function createBot() {
     }, 3000);
   });
 
-  // সার্ভার থেকে বের হয়ে গেলে বা ডিসকানেক্ট হলে নিজে থেকে আবার রিজয়েন নেবে
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
     setTimeout(createBot, 10000);
