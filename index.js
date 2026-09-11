@@ -9,6 +9,7 @@ function createBot() {
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
+    auth: 'offline',
     checkTimeoutInterval: 120 * 1000
   });
 
