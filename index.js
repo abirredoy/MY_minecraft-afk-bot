@@ -5,7 +5,7 @@ function createBot() {
   console.log('Connecting to server...');
 
   const bot = mineflayer.createBot({
-    host: 'ZenoXForce.aternos.me',
+    host: '185.107.192.149',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
@@ -23,6 +23,14 @@ function createBot() {
       defaultMove.canDig = false;
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
+
+    // Aternos এর এএফকে ডিটেকশন এড়াতে প্রতি ২ মিনিট পর পর ছোট জাম্প দেওয়া
+    setInterval(() => {
+      try {
+        bot.setControlState('jump', true);
+        setTimeout(() => bot.setControlState('jump', false), 500);
+      } catch (e) {}
+    }, 120 * 1000);
 
     setTimeout(() => {
       console.log('Scheduled session end. Disconnecting bot...');
@@ -69,9 +77,13 @@ function createBot() {
     }, 3000);
   });
 
+  bot.on('kicked', (reason) => {
+    console.log(`Kicked from server: ${reason}`);
+  });
+
   bot.on('end', (reason) => {
-    console.log(`Disconnected: ${reason}. Reconnecting in 10s...`);
-    setTimeout(createBot, 10000);
+    console.log(`Disconnected: ${reason}. Reconnecting in 20s...`);
+    setTimeout(createBot, 20000);
   });
 
   bot.on('error', err => {});
