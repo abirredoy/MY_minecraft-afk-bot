@@ -82,8 +82,8 @@ function createBot() {
   });
 
   bot.on('end', (reason) => {
-    console.log(`Disconnected: ${reason}. Reconnecting in 20s...`);
-    setTimeout(createBot, 20000);
+    console.log(`Disconnected: ${reason}. Reconnecting in 3s...`);
+    setTimeout(createBot, 3000); // রিকানেক্ট সময় কমিয়ে ৩ সেকেন্ড করা হলো
   });
 
   bot.on('error', err => {});
