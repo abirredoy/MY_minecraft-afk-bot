@@ -23,15 +23,9 @@ function createBot() {
       defaultMove.canDig = false;
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
-
-    // একটু বিরতিতে স্বাভাবিক রাখার জন্য সময়ের ব্যবধান বাড়িয়ে দেওয়া হলো
-    setTimeout(() => {
-      console.log('Scheduled session end. Disconnecting bot...');
-      bot.quit();
-    }, 4 * 60 * 60 * 1000); 
   });
 
-  // মুভমেন্ট চেক করার সময় ৫ সেকেন্ড থেকে বাড়িয়ে ১৫ সেকেন্ড করা হলো যাতে স্প্যাম না হয়
+  // মুভমেন্ট চেক করার সময় ১৫ সেকেন্ড রাখা হয়েছে যাতে অ্যান্টিচিট সমস্যা না করে
   setInterval(() => {
     if (!bot.entity) return;
 
@@ -50,7 +44,6 @@ function createBot() {
           }
         } 
         else {
-          // খুব বেশি ঘন ঘন নড়াচড়া না করে মাঝেমধ্যে হালকা পজিশন বদলানো
           if (!bot.pathfinder.isMoving() && Math.random() < 0.3) {
             const rx = Math.floor(Math.random() * 3) - 1;
             const rz = Math.floor(Math.random() * 3) - 1;
