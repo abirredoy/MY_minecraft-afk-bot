@@ -5,7 +5,7 @@ function createBot() {
   console.log('Connecting to server...');
 
   const bot = mineflayer.createBot({
-    host: 'ZenoXForce.aternos.me', // এখানে ডোমেইন নেম ব্যবহার করা হলো
+    host: 'ZenoXForce.aternos.me',
     port: 63435,
     username: 'ADMIN',
     version: '1.21.1',
@@ -24,40 +24,36 @@ function createBot() {
       bot.pathfinder.setMovements(defaultMove);
     } catch (e) {}
 
-    setInterval(() => {
-      try {
-        bot.setControlState('jump', true);
-        setTimeout(() => bot.setControlState('jump', false), 500);
-      } catch (e) {}
-    }, 120 * 1000);
-
+    // একটু বিরতিতে স্বাভাবিক রাখার জন্য সময়ের ব্যবধান বাড়িয়ে দেওয়া হলো
     setTimeout(() => {
       console.log('Scheduled session end. Disconnecting bot...');
       bot.quit();
     }, 4 * 60 * 60 * 1000); 
   });
 
+  // মুভমেন্ট চেক করার সময় ৫ সেকেন্ড থেকে বাড়িয়ে ১৫ সেকেন্ড করা হলো যাতে স্প্যাম না হয়
   setInterval(() => {
     if (!bot.entity) return;
 
     try {
       const bedBlock = bot.findBlock({
         matching: block => bot.isABed(block),
-        maxDistance: 64
+        maxDistance: 32
       });
 
       if (bedBlock) {
         const dist = bot.entity.position.distanceTo(bedBlock.position);
 
-        if (dist > 3) {
+        if (dist > 4) {
           if (!bot.pathfinder.isMoving()) {
             bot.pathfinder.setGoal(new goals.GoalBlock(bedBlock.position.x, bedBlock.position.y, bedBlock.position.z));
           }
         } 
         else {
-          if (!bot.pathfinder.isMoving()) {
-            const rx = Math.floor(Math.random() * 5) - 2;
-            const rz = Math.floor(Math.random() * 5) - 2;
+          // খুব বেশি ঘন ঘন নড়াচড়া না করে মাঝেমধ্যে হালকা পজিশন বদলানো
+          if (!bot.pathfinder.isMoving() && Math.random() < 0.3) {
+            const rx = Math.floor(Math.random() * 3) - 1;
+            const rz = Math.floor(Math.random() * 3) - 1;
             bot.pathfinder.setGoal(new goals.GoalBlock(
               bedBlock.position.x + rx,
               bedBlock.position.y,
@@ -67,7 +63,7 @@ function createBot() {
         }
       }
     } catch (e) {}
-  }, 5000);
+  }, 15000);
 
   bot.on('death', () => {
     console.log('Bot died. Respawning...');
@@ -82,7 +78,7 @@ function createBot() {
 
   bot.on('end', (reason) => {
     console.log(`Disconnected: ${reason}. Reconnecting in 3s...`);
-    setTimeout(createBot, 3000); // ৩ সেকেন্ড পর রিকানেক্ট করার চেষ্টা করবে
+    setTimeout(createBot, 3000);
   });
 
   bot.on('error', err => {});
