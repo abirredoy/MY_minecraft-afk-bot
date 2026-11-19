@@ -1,7 +1,16 @@
 {
-  "name": "minecraft-bot",
-  "version": "1.0.0",
+  "name": "minecraft-afk-bot",
+  "version": "1.1.0",
+  "private": true,
+  "description": "A Mineflayer Minecraft server companion bot with safe roaming and reconnect handling.",
   "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "check": "node --check index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "mineflayer": "^4.20.0",
     "mineflayer-pathfinder": "^2.4.2"
