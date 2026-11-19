@@ -2,16 +2,17 @@ name: Run Minecraft AFK Bot
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '*/10 * * * *'
 
+# GitHub Actions is a finite-duration runner, not an always-on Minecraft host.
+# Run manually for diagnostics/testing. Use an always-on host for 24/7 operation.
 concurrency:
   group: minecraft-bot
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    timeout-minutes: 350
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,9 +21,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Install dependencies
         run: npm install
 
+      - name: Check JavaScript syntax
+        run: npm run check
+
       - name: Run Bot
-        run: node index.js
+        run: npm start
